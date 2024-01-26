@@ -17,6 +17,6 @@ note: Use EDL_PARSER_DEFAULT_SEARCH_PATH environment variable to set the default
 2. Run the install.bat file
 3. Open the app with run.bat
 4. Load an EDL file
-5. Check values
+5. Inspect EDL
 6. Generate Folders
 7. Open Output Directory
