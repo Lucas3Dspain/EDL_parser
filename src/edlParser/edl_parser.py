@@ -2,21 +2,13 @@
 Coding Test: Make UI to select an EDL, parse it and show the needed data.
 """
 
-import re
 import os
+import re
 import sys
-from typing import Optional, List, Dict
+from typing import Dict, List, Optional
 
-from qtpy import QtCore, QtGui, QtWidgets
+from qtpy import QtCore, QtWidgets
 
-
-# todo: fix column spacing
-# done: center text
-# done: Add Clip method/property to build path as season/episode/shot -- for folder generation.
-# done: move Generate Folder button to be in the Bottom-Right corner
-# done: build folder structure from model.data Clips
-# todo: [before release] remove demo_edl and default_path
-# todo: [before release] code-review variable names, formatting, typing, docstrings
 
 ITEM_DATA_ROLE = QtCore.Qt.UserRole + 1
 
@@ -65,7 +57,7 @@ class Clip:
 
         Returns
         -------
-        Optional[Clip]
+        Optional['Clip']
         """
         prefix = file_name.split('-', 1)[0]
         match = re.match(r's(\d{2})e(\d{2})_(\d{3})', prefix)
@@ -97,18 +89,22 @@ class Clip:
 
 class FileSelectionWidget(QtWidgets.QWidget):
     file_filter = "EDL Files (*.edl);;All Files (*)"
-    default_path = None
+    default_path = r"C:\Users\LucasMorante\Desktop\_Repos\BidayaMedia\CodingTest_Assignment"
 
     def __init__(self, parent=None):
         super(FileSelectionWidget, self).__init__(parent)
 
-        self.file_path_line_edit = QtWidgets.QLineEdit(self)
+        # Main Layout
+        layout = QtWidgets.QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)
+
+        self.file_path_line_edit = QtWidgets.QLineEdit(parent=self)
         self.file_path_line_edit.setReadOnly(True)
 
-        self.select_file_button = QtWidgets.QPushButton("Select File", self)
+        self.select_file_button = QtWidgets.QPushButton(parent=self, text="Select File")
         self.select_file_button.clicked.connect(self.show_file_dialog)
 
-        layout = QtWidgets.QHBoxLayout(self)
         layout.addWidget(self.file_path_line_edit)
         layout.addWidget(self.select_file_button)
 
@@ -165,7 +161,7 @@ class TableModel(QtCore.QAbstractTableModel):
     def flags(self, index):
         return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
 
-    def sort(self, column, order):
+    def sort(self, column: int, order: QtCore.Qt.SortOrder = QtCore.Qt.AscendingOrder) -> None:
         self.layoutAboutToBeChanged.emit()
         self._data.sort(key=lambda x: getattr(x, list(x.get_attributes().keys())[column]))
         if order == QtCore.Qt.DescendingOrder:
@@ -214,8 +210,9 @@ class ClipTableWidget(QtWidgets.QWidget):
 
         # Set up layout
         main_layout = QtWidgets.QVBoxLayout()
+        main_layout.setAlignment(QtCore.Qt.AlignTop)
+        main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.addWidget(self.table_view)
-        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         self.setLayout(main_layout)
 
     def populate_table(self, data):
@@ -236,35 +233,31 @@ class ClipTableWidget(QtWidgets.QWidget):
 
 class EdlViewer(QtWidgets.QWidget):
     window_name = 'EDL Viewer'
-    window_icon = None
-    minimum_window_sizeH = 450
 
-    def __init__(self):
-        QtWidgets.QWidget.__init__(self)
+    def __init__(self, parent=None):
+        QtWidgets.QWidget.__init__(self, parent=parent)
 
         self.init_ui()
         self.connect_signals()
-        self.setMinimumSize(427, 500)
         self.resize(self.clipTableWdg.table_view.sizeHint())
 
     def init_ui(self):
         # Main Window
         self.setWindowTitle(self.window_name)
-        # self.setWindowIcon(QtGui.QIcon(filename=self.window_icon))
 
         self.main_layout = QtWidgets.QVBoxLayout()
         self.setLayout(self.main_layout)
 
         # File Picker Widget
-        self.filePickerWdg = FileSelectionWidget()
+        self.filePickerWdg = FileSelectionWidget(parent=self)
         self.main_layout.addWidget(self.filePickerWdg)
 
         # Table widget
-        self.clipTableWdg = ClipTableWidget()
+        self.clipTableWdg = ClipTableWidget(parent=self)
         self.main_layout.addWidget(self.clipTableWdg)
 
         # Generate Folders Button
-        self.generateBtn = QtWidgets.QPushButton(text="Generate Folders")
+        self.generateBtn = QtWidgets.QPushButton(text="Generate Folders", parent=self)
         self.main_layout.addWidget(self.generateBtn, alignment=QtCore.Qt.AlignRight)
 
     def connect_signals(self):
@@ -289,6 +282,10 @@ class EdlViewer(QtWidgets.QWidget):
         # Populate the table with data
         self.clipTableWdg.populate_table(clips)
 
+        # Resize
+        header_width = self.clipTableWdg.table_view.horizontalHeader().length()
+        self.clipTableWdg.setMinimumWidth(header_width+17)
+
     def _generate_folders(self):
         """
         Generate shot folders based on the Clip´s path.
@@ -307,14 +304,11 @@ class EdlViewer(QtWidgets.QWidget):
 
 
 def main():
+    import qtawesome
     app = QtWidgets.QApplication(sys.argv)
+    qtawesome.dark(app)
     widget = EdlViewer()
     widget.show()
-
-    # DEMO
-    demo_edl = "C:/Users/LucasMorante/Desktop/_Repos/BidayaMedia/CodingTest_Assignment/s01e10_v06_r30_06062022_FH.edl"
-    widget.filePickerWdg.file_path_line_edit.setText(demo_edl)
-
     sys.exit(app.exec_())
 
 
