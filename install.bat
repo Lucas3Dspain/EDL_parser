@@ -19,7 +19,7 @@ timeout /t 5 >nul
 REM Check if the user pressed 'o' during the 15 seconds
 set /p "choice="
 if /i "%choice%"=="Y" (
-    start run.bat
+    python src/edlParser/edl_parser.py
 ) else (
     exit
 )
