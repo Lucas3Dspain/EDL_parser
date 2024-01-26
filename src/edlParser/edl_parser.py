@@ -11,6 +11,7 @@ from qtpy import QtCore, QtWidgets
 
 
 ITEM_DATA_ROLE = QtCore.Qt.UserRole + 1
+DEFAULT_SEARCH_PATH = r"C:\Users\LucasMorante\Desktop\_Repos\BidayaMedia\CodingTest_Assignment"
 
 
 def parse_edl(file_path: str, pattern: str) -> List[str]:
@@ -89,7 +90,6 @@ class Clip:
 
 class FileSelectionWidget(QtWidgets.QWidget):
     file_filter = "EDL Files (*.edl);;All Files (*)"
-    default_path = r"C:\Users\LucasMorante\Desktop\_Repos\BidayaMedia\CodingTest_Assignment"
 
     def __init__(self, parent=None):
         super(FileSelectionWidget, self).__init__(parent)
@@ -114,7 +114,7 @@ class FileSelectionWidget(QtWidgets.QWidget):
         """
         options = QtWidgets.QFileDialog.Options()
         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
-            self, "Select File", self.default_path, self.file_filter, options=options
+            self, "Select File", DEFAULT_SEARCH_PATH, self.file_filter, options=options
         )
         if file_path:
             self.file_path_line_edit.setText(file_path)
