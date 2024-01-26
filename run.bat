@@ -8,3 +8,4 @@ python src/edlParser/edl_parser.py && (
     rem Deactivate the virtual environment (optional)
     deactivate
 )
+exit

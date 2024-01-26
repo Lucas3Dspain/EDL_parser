@@ -5,13 +5,15 @@ Coding Test: Make UI to select an EDL, parse it and show the needed data.
 import os
 import re
 import sys
+import qtawesome
+
 from typing import Dict, List, Optional
 
 from qtpy import QtCore, QtWidgets
 
 
 ITEM_DATA_ROLE = QtCore.Qt.UserRole + 1
-DEFAULT_SEARCH_PATH = r"C:\Users\LucasMorante\Desktop\_Repos\BidayaMedia\CodingTest_Assignment"
+DEFAULT_SEARCH_PATH = os.environ.get('EDL_PARSER_DEFAULT_SEARCH_PATH')
 
 
 def parse_edl(file_path: str, pattern: str) -> List[str]:
@@ -257,15 +259,27 @@ class EdlViewer(QtWidgets.QWidget):
         self.main_layout.addWidget(self.clipTableWdg)
 
         # Generate Folders Button
+        self.bottomSection_layout = QtWidgets.QHBoxLayout()
+        self.bottomSection_layout.setAlignment(QtCore.Qt.AlignRight)
+
         self.generateBtn = QtWidgets.QPushButton(text="Generate Folders", parent=self)
-        self.main_layout.addWidget(self.generateBtn, alignment=QtCore.Qt.AlignRight)
+        self.generateBtn.setEnabled(False)
+        self.bottomSection_layout.addWidget(self.generateBtn)
+
+        self.openBtn = QtWidgets.QPushButton(text="Open Folder", parent=self)
+        self.openBtn.setEnabled(False)
+        self.bottomSection_layout.addWidget(self.openBtn)
+
+        self.main_layout.addLayout(self.bottomSection_layout)
 
     def connect_signals(self):
         # Changed File
         self.filePickerWdg.file_path_line_edit.textChanged.connect(self._update_file)
+        self.filePickerWdg.file_path_line_edit.textChanged.connect(self._check_empty_table)
 
         # Generate Button
         self.generateBtn.clicked.connect(self._generate_folders)
+        self.openBtn.clicked.connect(self._open_folder)
 
     def _update_file(self):
         """
@@ -302,9 +316,24 @@ class EdlViewer(QtWidgets.QWidget):
         for path in set(shot_paths):
             os.makedirs(path, exist_ok=True)
 
+    def _open_folder(self):
+        """
+        Generate shot folders based on the Clip´s path.
+        """
+        edl_dir = os.path.dirname(self.edl_path)
+        os.startfile(edl_dir)
+
+    def _check_empty_table(self):
+        """
+        Check if the table is empty, enable/disable buttons accordingly.
+        """
+        is_empty_data_model = self.clipTableWdg.table_model.rowCount() == 0
+
+        self.generateBtn.setEnabled(not is_empty_data_model)
+        self.openBtn.setEnabled(not is_empty_data_model)
+
 
 def main():
-    import qtawesome
     app = QtWidgets.QApplication(sys.argv)
     qtawesome.dark(app)
     widget = EdlViewer()
