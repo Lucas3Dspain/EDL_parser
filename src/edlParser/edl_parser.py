@@ -1,27 +1,40 @@
 """
 Coding Test: Make UI to select an EDL, parse it and show the needed data.
-
 """
+
 import re
+import os
 import sys
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 from qtpy import QtCore, QtGui, QtWidgets
 
 
 # todo: fix column spacing
-# todo: make columns expand horizontally to fit the text plus a margin. on update.
-# todo: Add Clip method/property to build path as season/episode/shot -- for folder generation.
+# done: center text
+# done: Add Clip method/property to build path as season/episode/shot -- for folder generation.
+# done: move Generate Folder button to be in the Bottom-Right corner
+# done: build folder structure from model.data Clips
 # todo: [before release] remove demo_edl and default_path
-# todo: [before release] code-review variable names, formating, typing, docstrings
+# todo: [before release] code-review variable names, formatting, typing, docstrings
+
+ITEM_DATA_ROLE = QtCore.Qt.UserRole + 1
+
 
 def parse_edl(file_path: str, pattern: str) -> List[str]:
     """
     Function to extract strings that match the provided regex pattern in the provided EDL file.
 
-    :param file_path: Path to the EDL file.
-    :param pattern: Regex pattern to match.
-    :return: List of strings matching the pattern.
+    Parameters
+    ----------
+    file_path: str
+        Fullpath of the EDL file.
+    pattern: str
+        Regex pattern.
+
+    Returns
+    -------
+    List[str]
     """
     files = []
     with (open(file_path, 'r') as edl_file):
@@ -34,10 +47,6 @@ def parse_edl(file_path: str, pattern: str) -> List[str]:
 
 
 class Clip:
-    """
-    Object to represent a editorial clip
-    """
-
     def __init__(self, name, shot, episode, season):
         self.name = name
         self.shot = shot
@@ -45,37 +54,50 @@ class Clip:
         self.season = season
 
     @classmethod
-    def from_file(cls, file_name):
+    def from_file(cls, file_name: str) -> Optional['Clip']:
         """
         Create a Clip object from a file. It will extract Season, Episode, shot from the file name.
 
-        :param file_name: Name of the file.
-        :return: Clip object.
+        Parameters
+        ----------
+        file_name: str
+            Fullpath of the EDL file.
+
+        Returns
+        -------
+        Optional[Clip]
         """
         prefix = file_name.split('-', 1)[0]
-        season, episode, shot = re.match(r's(\d{2})e(\d{2})_(\d{3})', prefix).groups()
+        match = re.match(r's(\d{2})e(\d{2})_(\d{3})', prefix)
+        if not match:
+            return None
+        season, episode, shot = match.groups()
 
         formatted_season = 's' + season.zfill(2)
         formatted_episode = 'e' + episode.zfill(3)
-        formatted_shot = shot.zfill(4)
+        formatted_shot = 's' + shot.zfill(4)
 
         return cls(name=file_name,
                    shot=formatted_shot,
                    episode=formatted_episode,
                    season=formatted_season)
 
-    def get_attributes(self):
+    def get_attributes(self) -> Dict[str, str]:
         """
         Get attributes of the Clip object.
 
-        :return: Dictionary containing attribute names and values.
+        Returns
+        -------
+        Dict[str, str]
+            Dictionary containing attribute names and values.
         """
-        return {attr: getattr(self, attr) for attr in vars(self) if not callable(getattr(self, attr)) and not attr.startswith("__")}
+        return {attr: getattr(self, attr) for attr in vars(self)
+                if not callable(getattr(self, attr)) and not attr.startswith("__")}
 
 
 class FileSelectionWidget(QtWidgets.QWidget):
     file_filter = "EDL Files (*.edl);;All Files (*)"
-    default_path = r"C:\Users\LucasMorante\Desktop\_Repos\BidayaMedia\CodingTest_Assignment"
+    default_path = None
 
     def __init__(self, parent=None):
         super(FileSelectionWidget, self).__init__(parent)
@@ -102,6 +124,13 @@ class FileSelectionWidget(QtWidgets.QWidget):
             self.file_path_line_edit.setText(file_path)
 
 
+class CenterTextDelegate(QtWidgets.QStyledItemDelegate):
+    def paint(self, painter, option, index):
+        if index.column() > 0:
+            option.displayAlignment = QtCore.Qt.AlignCenter
+        super().paint(painter, option, index)
+
+
 class TableModel(QtCore.QAbstractTableModel):
     def __init__(self, data, header_labels, parent=None):
         super(TableModel, self).__init__(parent)
@@ -119,11 +148,13 @@ class TableModel(QtCore.QAbstractTableModel):
             return 0
 
     def data(self, index, role=QtCore.Qt.DisplayRole):
+        clip = self._data[index.row()]
         if role == QtCore.Qt.DisplayRole:
-            clip = self._data[index.row()]
             clip_attributes = [attr for attr in clip.get_attributes()]
             attribute_name = clip_attributes[index.column()]
             return str(getattr(clip, attribute_name))
+        elif role == ITEM_DATA_ROLE:
+            return clip
         return None
 
     def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
@@ -145,7 +176,14 @@ class TableModel(QtCore.QAbstractTableModel):
         """
         Update the underlying data of the model.
 
-        :param new_data: New data to replace the current data.
+        Parameters
+        ----------
+        new_data: List[Clip]
+            New data to replace the current data.
+
+        Returns
+        -------
+        None
         """
         self.beginResetModel()
         self._data = new_data
@@ -156,60 +194,58 @@ class TableView(QtWidgets.QTableView):
     def __init__(self, model, parent=None):
         super(TableView, self).__init__(parent)
         self.setModel(model)
-
         self.setSortingEnabled(True)
         self.verticalHeader().setVisible(False)
         self.setSelectionMode(QtWidgets.QTreeView.ExtendedSelection)
+        self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
 
-        # Set resize modes for the horizontal header
-        # self.horizontalHeader().setStretchLastSection(False)
-        # self.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
-        # self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
-        # self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
-        # self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Custom)
-        # self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Interactive)
-
+        center_text_delegate = CenterTextDelegate(parent)
+        self.setItemDelegate(center_text_delegate)
 
 
 class ClipTableWidget(QtWidgets.QWidget):
-    """
-    Widget for displaying a table of Clip objects.
-    """
-
     def __init__(self, parent=None):
         super(ClipTableWidget, self).__init__(parent)
 
         # Create a table widget
-        self.header_labels = ['Clip', 'Shot', 'Episode', 'Season']
-        self.table_model = TableModel(data=[], header_labels=self.header_labels)
+        header_labels = ['Clip', 'Shot', 'Episode', 'Season']
+        self.table_model = TableModel(data=[], header_labels=header_labels)
         self.table_view = TableView(model=self.table_model)
 
         # Set up layout
         main_layout = QtWidgets.QVBoxLayout()
         main_layout.addWidget(self.table_view)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         self.setLayout(main_layout)
 
     def populate_table(self, data):
         """
         Populate the table with Clip objects.
 
-        :param data: List of Clip objects.
+        Parameters
+        ----------
+        data: List[Clip]
+            List of Clip objects.
+
+        Returns
+        -------
+        None
         """
         self.table_model.update_data(data)
 
 
 class EdlViewer(QtWidgets.QWidget):
-    """
-    Main application window for viewing EDL files.
-    """
     window_name = 'EDL Viewer'
     window_icon = None
+    minimum_window_sizeH = 450
 
     def __init__(self):
         QtWidgets.QWidget.__init__(self)
 
         self.init_ui()
         self.connect_signals()
+        self.setMinimumSize(427, 500)
+        self.resize(self.clipTableWdg.table_view.sizeHint())
 
     def init_ui(self):
         # Main Window
@@ -229,7 +265,7 @@ class EdlViewer(QtWidgets.QWidget):
 
         # Generate Folders Button
         self.generateBtn = QtWidgets.QPushButton(text="Generate Folders")
-        self.main_layout.addWidget(self.generateBtn)
+        self.main_layout.addWidget(self.generateBtn, alignment=QtCore.Qt.AlignRight)
 
     def connect_signals(self):
         # Changed File
@@ -242,7 +278,6 @@ class EdlViewer(QtWidgets.QWidget):
         """
         Update the table data with the new EDL file.
         """
-
         # Get EDL path
         self.edl_path = self.filePickerWdg.file_path_line_edit.text()
 
@@ -258,21 +293,28 @@ class EdlViewer(QtWidgets.QWidget):
         """
         Generate shot folders based on the Clip´s path.
         """
-        """
-        - get edl path to use as root dir
-        - use optimized logic to build all paths robustly.
-        """
-        print("Hit on _generate_folders")
-        return None
+        edl_dir = os.path.dirname(self.edl_path)
+
+        shot_paths = []
+        for i in range(self.clipTableWdg.table_model.rowCount()):
+            index = self.clipTableWdg.table_model.index(i, 0)
+            clip = self.clipTableWdg.table_model.data(index, ITEM_DATA_ROLE)
+            shot_path = f"{edl_dir}/{clip.season}/{clip.episode}/{clip.episode}{clip.shot}"
+            shot_paths.append(shot_path)
+
+        for path in set(shot_paths):
+            os.makedirs(path, exist_ok=True)
 
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
     widget = EdlViewer()
     widget.show()
+
     # DEMO
     demo_edl = "C:/Users/LucasMorante/Desktop/_Repos/BidayaMedia/CodingTest_Assignment/s01e10_v06_r30_06062022_FH.edl"
     widget.filePickerWdg.file_path_line_edit.setText(demo_edl)
+
     sys.exit(app.exec_())
 
 
