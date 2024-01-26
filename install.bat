@@ -1,16 +1,16 @@
 @ECHO OFF
 
-rem   REM Create | Activate | Update the virtual environment
-rem   echo Creating virtual env...
-rem   python -m venv .venv
-rem   call .venv\Scripts\activate
-rem   python -m pip install --upgrade pip
-rem
-rem   REM Installing Packages
-rem   echo Installing packages...
-rem   pip install PySide2
-rem   pip install QtPy
-rem   pip install qtawesome
+REM Create | Activate | Update the virtual environment
+echo Creating virtual env...
+python -m venv .venv
+call .venv\Scripts\activate
+python -m pip install --upgrade pip
+
+REM Installing Packages
+echo Installing packages...
+pip install PySide2
+pip install QtPy
+pip install qtawesome
 
 REM Notify user and wait for 15 seconds
 echo Installation complete! Press 'Y' + Enter to open the tool...
