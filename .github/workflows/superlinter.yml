@@ -2,18 +2,85 @@
 
 name: Super-Linter
 
-on: push
+on: [push, pull_request]
+
+#jobs:
+#  python-lint:
+#    runs-on: ubuntu-latest
+#    name: CI workflow
+##    steps:
+##    - name: checkout repo branch
+##      uses: actions/checkout@main
+##
+##    - name: Install dependencies
+##      run: |
+##        python -m pip install --upgrade pip
+##        pip install -r requirements.txt
+##
+##    - name: linting
+##      uses: programmingwithalex/pylinter@main
+##      with:
+##        python-root: '.'
+##        flake8-flags: '--max-line-length 100'
+##        mypy-flags: ''
+##        # fail-on-isort: false
+##        # skip-flake8: false
+##        # skip-mypy: true
+##        # skip-isort: false
+##        # mypy-ignore-dirs-files: ''
+##        # requirements-file: ''
+#
+#    steps:
+##      - name: Install dependencies
+##        run: |
+##          python -m pip install --upgrade pip
+##          pip install -r requirements.txt
+#
+#      - uses: actions/checkout@v4
+#      - uses: ricardochaves/python-lint@v1.4.0
+#        with:
+#          python-root-list: "src"
+#          use-pylint: false
+#          use-pycodestyle: false
+#          use-flake8: true
+#          use-black: true
+#          use-mypy: true
+#          use-isort: true
+#          extra-pylint-options: ""
+#          extra-pycodestyle-options: ""
+#          extra-flake8-options: "--max-line-length 100"
+#          extra-black-options: ""
+#          extra-mypy-options: ""
+#          extra-isort-options: ""
+
 
 jobs:
-  super-lint:
-    name: Lint code base
+  python-lint:
     runs-on: ubuntu-latest
+    name: CI workflow
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+    - name: Checkout repo branch
+      uses: actions/checkout@main
 
-      - name: Run Super-Linter
-        uses: github/super-linter@v4
-        env:
-          DEFAULT_BRANCH: main
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        stubgen -p qtawesome -o .venv/Lib/site-packages/qtawesome-stubs
+
+    - name: isort
+      run: isort src --check-only --diff
+
+    - name: pycodestyle (pep8)
+      run: pycodestyle src --max-line-length 100
+
+    - name: Flake8
+      run: flake8 src --max-line-length 100
+
+    - name: Mypy
+      run: mypy src

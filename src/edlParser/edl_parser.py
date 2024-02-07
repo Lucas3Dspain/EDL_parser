@@ -5,12 +5,10 @@ Coding Test: Make UI to select an EDL, parse it and show the needed data.
 import os
 import re
 import sys
-import qtawesome
-
 from typing import Dict, List, Optional
 
+import qtawesome  # type: ignore
 from qtpy import QtCore, QtWidgets
-
 
 ITEM_DATA_ROLE = QtCore.Qt.UserRole + 1
 DEFAULT_SEARCH_PATH = os.environ.get('EDL_PARSER_DEFAULT_SEARCH_PATH')
@@ -31,6 +29,7 @@ def parse_edl(file_path: str, pattern: str) -> List[str]:
     -------
     List[str]
     """
+
     files = []
     with (open(file_path, 'r') as edl_file):
         for line in edl_file:
